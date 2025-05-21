@@ -4,6 +4,8 @@ import localFont from "next/font/local";
 import { AOS } from "./components/global";
 import { Montserrat } from "next/font/google";
 import type { Metadata, Viewport } from "next";
+import { AuthProvider } from "./context/AuthContext";
+import Navbar from "./components/global/Navbar";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -96,7 +98,10 @@ export default function RootLayout({
       >
         <Toaster richColors />
         <AOS />
-        {children}
+        <AuthProvider>
+          <Navbar />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

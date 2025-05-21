@@ -1,5 +1,5 @@
 import { compare, hash } from "bcrypt";
-import jwt from "jsonwebtoken";
+import jwt, { JwtPayload, Secret, VerifyOptions } from "jsonwebtoken";
 import { prisma } from "./prisma";
 import { NextRequest } from "next/server";
 
@@ -17,22 +17,26 @@ export async function comparePasswords(
 }
 
 export function generateToken(userId: string): string {
-  if (!process.env.JWT_SECRET) {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
     throw new Error("JWT_SECRET is not defined in environment variables");
   }
 
-  return jwt.sign({ userId }, process.env.JWT_SECRET, {
+  // Using `as jwt.Secret` to satisfy TypeScript
+  return jwt.sign({ userId }, secret as jwt.Secret, {
     expiresIn: process.env.JWT_EXPIRES_IN || "7d",
   });
 }
 
 export function verifyToken(token: string): { userId: string } | null {
-  if (!process.env.JWT_SECRET) {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
     throw new Error("JWT_SECRET is not defined in environment variables");
   }
 
   try {
-    return jwt.verify(token, process.env.JWT_SECRET) as { userId: string };
+    // Using `as jwt.Secret` to satisfy TypeScript
+    return jwt.verify(token, secret as jwt.Secret) as { userId: string };
   } catch (error) {
     return null;
   }
@@ -70,3 +74,28 @@ export async function checkAdmin(req: NextRequest) {
 
   return user;
 }
+
+/**
+ * Verify JWT token from request header
+ */
+export const verifyAuthToken = (req: NextRequest) => {
+  try {
+    const token = req.headers.get("authorization")?.split(" ")[1];
+
+    if (!token) {
+      return null;
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error("JWT_SECRET is not defined");
+    }
+
+    const decoded = jwt.verify(token, secret as Secret) as JwtPayload & {
+      userId: string;
+    };
+    return decoded;
+  } catch (error) {
+    return null;
+  }
+};

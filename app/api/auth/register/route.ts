@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
 import { hashPassword } from "@/app/lib/auth";
+import jwt, { Secret, SignOptions } from "jsonwebtoken";
 
 export async function POST(req: NextRequest) {
   try {
@@ -42,11 +43,24 @@ export async function POST(req: NextRequest) {
         name: true,
         email: true,
         isAdmin: true,
-        createdAt: true,
       },
     });
 
-    return NextResponse.json({ user }, { status: 201 });
+    // Generate token
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error("JWT_SECRET is not defined");
+    }
+
+    const token = jwt.sign(
+      { userId: user.id },
+      secret as Secret,
+      {
+        expiresIn: process.env.JWT_EXPIRES_IN || "7d",
+      } as SignOptions
+    );
+
+    return NextResponse.json({ user, token }, { status: 201 });
   } catch (error) {
     console.error("Error registering user:", error);
     return NextResponse.json(
