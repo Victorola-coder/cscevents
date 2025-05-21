@@ -1,4 +1,23 @@
+import React from "react";
 import clsx from "clsx";
+
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  loading?: boolean;
+  noDefault?: boolean;
+  variant?:
+    | "default"
+    | "primary"
+    | "secondary"
+    | "danger"
+    | "google"
+    | "ghost"
+    | "outline"
+    | "link";
+  size?: "default" | "sm" | "lg" | "icon";
+  className?: string;
+  children?: React.ReactNode;
+  asChild?: boolean;
+}
 
 export default function Button(props: ButtonProps) {
   const {
@@ -10,6 +29,7 @@ export default function Button(props: ButtonProps) {
     disabled,
     size = "default",
     variant = "default",
+    asChild,
     ...prop
   } = props;
 
@@ -19,29 +39,43 @@ export default function Button(props: ButtonProps) {
       disabled={loading || disabled}
       className={clsx(
         !noDefault &&
-          "transition-all duration-300 active:scale-[0.99] px-[21px] py-[10px] font-medium text-[18px] leading-normal font-aloeMed disabled:cursor-not-allowed disabled:bg-opacity-60",
+          "inline-flex items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 rounded-md",
         {
-          "px-[21px] py-[12.5px] text-[18px]": size === "default",
-          "px-3 py-2 text-sm": size === "sm",
-          "px-6 py-3 text-lg": size === "lg",
-          "bg-gradient-to-r from-primary-100 to-primary rounded-[10px]  text-white":
-            variant === "default",
-          "bg-[#FFFFFF] text-black rounded-[16px]": variant === "secondary",
-          "bg-red-500/10 hover:bg-red-500/20 text-red-500":
+          // Size variants
+          "h-10 px-4 py-2 text-sm": size === "default",
+          "h-9 px-3 py-2 text-xs rounded-md": size === "sm",
+          "h-11 px-8 py-3 text-base rounded-md": size === "lg",
+          "h-10 w-10 p-0": size === "icon",
+
+          // Color and style variants
+          "bg-primary text-primary-foreground hover:bg-primary/90":
+            variant === "default" || variant === "primary",
+          "bg-secondary text-secondary-foreground hover:bg-secondary/90":
+            variant === "secondary",
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90":
             variant === "danger",
-          "bg-[#6B39FF] hover:bg-[#6B39FF]/80 rounded-[12px] active:bg-[#6B39FF]/90 text-white":
-            variant === "primary",
-          "bg-[#283142] rounded-[12px] text-[#FFFFFF]": variant === "google",
+          "bg-[#4285F4] text-white hover:bg-[#4285F4]/90": variant === "google",
+          "bg-transparent hover:bg-muted text-text-primary":
+            variant === "ghost",
+          "border border-input bg-background text-foreground hover:bg-accent":
+            variant === "outline",
+          "p-0 h-auto underline-offset-4 hover:underline text-primary bg-transparent":
+            variant === "link",
         },
         className
       )}
-      arial-busy={loading?.toString()}
+      aria-busy={loading ? true : false}
       {...prop}
     >
-      <div className="flex items-center justify-center">
+      <div
+        className={clsx("flex items-center justify-center gap-2", {
+          "w-full h-full": true,
+          "flex-1": size === "icon",
+        })}
+      >
         {loading ? (
           <svg
-            className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+            className="animate-spin h-5 w-5 text-current"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
@@ -67,3 +101,6 @@ export default function Button(props: ButtonProps) {
     </button>
   );
 }
+
+// For convenience, also export a named Button component
+export { Button };
