@@ -9,7 +9,7 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        // if you are using variable and want to use more than one fonts for your webapp,you could define it here. like i did 
+        // if you are using variable and want to use more than one fonts for your webapp,you could define it here. like i did
         geistSans: ["var(--font-geist-sans)"],
       },
       keyframes: {
@@ -78,6 +78,26 @@ const config: Config = {
           DEFAULT: "#E1DEF0",
           100: "#F3EFFD",
         },
+        // NACS Event colors
+        rangitoto: "#26261e",
+        malachite: {
+          DEFAULT: "#1be518",
+          light: "#4eef4a",
+          dark: "#17cc14",
+        },
+        goblin: {
+          DEFAULT: "#40863d",
+          light: "#54a450",
+          dark: "#37742f",
+        },
+        tia_maria: {
+          DEFAULT: "#d52a0d",
+          light: "#ef3a1b",
+          dark: "#b8240b",
+        },
+        envy: "#94b299",
+        golden_grass: "#d2a21c",
+        pueblo: "#85260f",
       },
     },
   },

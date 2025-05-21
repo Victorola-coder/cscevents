@@ -1,0 +1,78 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  isAdmin   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tickets   Ticket[]
+}
+
+model Event {
+  id          String    @id @default(uuid())
+  title       String
+  description String
+  location    String
+  date        DateTime
+  time        String
+  price       Float
+  imageUrl    String?
+  mc          String?
+  dj          String?
+  guestArtist String?
+  features    String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  tickets     Ticket[]
+}
+
+model Ticket {
+  id              String    @id @default(uuid())
+  ticketId        String    @unique
+  quantity        Int
+  totalAmount     Float
+  paymentMethod   String
+  paymentStatus   String    @default("pending") // pending, completed, failed
+  paymentReference String?
+  validatedAt     DateTime?
+  purchaseDate    DateTime  @default(now())
+  event           Event     @relation(fields: [eventId], references: [id])
+  eventId         String
+  user            User      @relation(fields: [userId], references: [id])
+  userId          String
+  transaction     Transaction?
+  isUsed          Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Transaction {
+  id              String   @id @default(uuid())
+  amount          Float
+  narration       String
+  reference       String   @unique
+  monoId          String?  // ID from Mono API if available
+  type            String   // credit or debit
+  status          String   @default("pending") // pending, completed, failed
+  ticket          Ticket   @relation(fields: [ticketId], references: [id])
+  ticketId        String   @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}

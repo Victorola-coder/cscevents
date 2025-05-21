@@ -1,8 +1,9 @@
 import axios from "axios";
+import { prisma } from "./prisma";
 
 // These would come from environment variables in a real application
-const MONO_SECRET_KEY = "your_mono_secret_key";
-const MONO_API_URL = "https://api.withmono.com";
+const MONO_SECRET_KEY = process.env.MONO_SECRET_KEY || "your_mono_secret_key";
+const MONO_API_URL = process.env.MONO_API_URL || "https://api.withmono.com";
 
 interface MonoTransaction {
   _id: string;
@@ -21,28 +22,42 @@ interface MonoTransactionsResponse {
 }
 
 /**
- * Verify if a payment has been made
- * In a real application, you would search for specific transactions
- * with a reference or specific narration that matches the payment
+ * Verify if a payment has been made and update the database
  */
 export async function verifyPayment(
-  accountId: string,
+  ticketId: string,
   reference: string,
   amount: number
 ): Promise<boolean> {
   try {
-    // In a real app, this would be implemented with proper authentication and parameters
-    // For this example, we'll simulate a successful verification
-
+    // In development mode, simulate successful payment
     if (process.env.NODE_ENV === "development") {
       console.log("Development environment, simulating payment verification");
-      // Simulate verification (always successful in development)
+
+      // Update the database with simulated successful payment
+      const ticket = await prisma.ticket.update({
+        where: { ticketId },
+        data: { paymentStatus: "completed" },
+      });
+
+      // Create a transaction record
+      await prisma.transaction.create({
+        data: {
+          amount,
+          narration: `NACS Bits & Vibes Payment - ${ticketId}`,
+          reference,
+          type: "credit",
+          status: "completed",
+          ticketId: ticket.id,
+        },
+      });
+
       return true;
     }
 
-    // In production, you would make an actual API call
+    // In production, make an actual API call to Mono
     const response = await axios.get<MonoTransactionsResponse>(
-      `${MONO_API_URL}/v2/accounts/${accountId}/transactions`,
+      `${MONO_API_URL}/v2/accounts/${ticketId}/transactions`,
       {
         headers: {
           accept: "application/json",
@@ -59,7 +74,30 @@ export async function verifyPayment(
         trans.type === "credit"
     );
 
-    return !!matchingTransaction;
+    if (matchingTransaction) {
+      // Update the database with verified payment
+      const ticket = await prisma.ticket.update({
+        where: { ticketId },
+        data: { paymentStatus: "completed" },
+      });
+
+      // Create a transaction record
+      await prisma.transaction.create({
+        data: {
+          amount,
+          narration: matchingTransaction.narration,
+          reference,
+          monoId: matchingTransaction._id,
+          type: "credit",
+          status: "completed",
+          ticketId: ticket.id,
+        },
+      });
+
+      return true;
+    }
+
+    return false;
   } catch (error) {
     console.error("Error verifying payment with Mono:", error);
     throw new Error("Payment verification failed");
@@ -74,52 +112,43 @@ export function generatePaymentReference(ticketId: string): string {
 }
 
 /**
- * Get recent transactions for an account
+ * Get recent transactions for a specific ticket from our database
  */
-export async function getRecentTransactions(
-  accountId: string
-): Promise<MonoTransaction[]> {
+export async function getTransactionByTicketId(ticketId: string) {
   try {
-    if (process.env.NODE_ENV === "development") {
-      // Return mock data in development
-      return mockTransactions;
-    }
-
-    const response = await axios.get<MonoTransactionsResponse>(
-      `${MONO_API_URL}/v2/accounts/${accountId}/transactions`,
-      {
-        headers: {
-          accept: "application/json",
-          "mono-sec-key": MONO_SECRET_KEY,
-        },
-      }
-    );
-
-    return response.data.data.transactions;
+    return await prisma.transaction.findUnique({
+      where: { ticketId },
+    });
   } catch (error) {
-    console.error("Error fetching transactions from Mono:", error);
-    throw new Error("Failed to fetch transactions");
+    console.error("Error fetching transaction:", error);
+    throw new Error("Failed to fetch transaction");
   }
 }
 
-// Mock transactions for development
-const mockTransactions: MonoTransaction[] = [
-  {
-    _id: "12345",
-    amount: 2000,
-    narration: "NACS Bits & Vibes Payment",
-    date: new Date().toISOString(),
-    type: "credit",
-    reference: "NACS-ABC123-1623456789",
-    balance: 15000,
-  },
-  {
-    _id: "12346",
-    amount: 4000,
-    narration: "NACS Bits & Vibes Payment (2 tickets)",
-    date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    type: "credit",
-    reference: "NACS-DEF456-1623456790",
-    balance: 13000,
-  },
-];
+/**
+ * Get all recent transactions from our database
+ */
+export async function getAllTransactions(limit: number = 10) {
+  try {
+    return await prisma.transaction.findMany({
+      take: limit,
+      orderBy: { createdAt: "desc" },
+      include: {
+        ticket: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching transactions:", error);
+    throw new Error("Failed to fetch transactions");
+  }
+}
